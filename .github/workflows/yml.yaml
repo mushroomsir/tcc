@@ -31,7 +31,7 @@ jobs:
         export TZ=UTC
         sudo systemctl enable mysql.service
         sudo systemctl start mysql.service
-        mysql -hlocalhost -uroot -proot < ./sql/schema.sql
+        mysql -hlocalhost -uroot -proot < ./sql/mysql.sql
 
     - name: Get dependencies
       run: |
@@ -45,4 +45,4 @@ jobs:
 
     - name: Test
       run: |
-        CONFIG_FILE_PATH=${PWD}/config/test_on_github.yml APP_ENV=test go test -v ./...
+        go test -p 1 -v ./...

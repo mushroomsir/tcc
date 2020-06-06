@@ -32,7 +32,7 @@ func NewDB() *gorm.DB {
 	parameters.Set("parseTime", "true")
 
 	user := "root"
-	password := "password"
+	password := "root"
 	host := "localhost:3306"
 	database := "test_tcc"
 	// https://github.com/go-sql-driver/mysql#parameters

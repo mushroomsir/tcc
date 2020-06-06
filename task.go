@@ -27,8 +27,8 @@ func (a *Task) Cancel() error {
 	return a.store.Cancel(a.uid)
 }
 
-// JsonToObj ...
-func (a *Task) JsonToObj(dest interface{}) error {
+// JSONToObj ...
+func (a *Task) JSONToObj(dest interface{}) error {
 	err := json.Unmarshal([]byte(a.Value), dest)
 	return err
 }

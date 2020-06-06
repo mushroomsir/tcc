@@ -2,8 +2,8 @@ package tcc
 
 import "encoding/json"
 
-// ObjToJson ...
-func ObjToJson(v interface{}) string {
+// ObjToJSON ...
+func ObjToJSON(v interface{}) string {
 	value := ""
 	switch s := v.(type) {
 	case string:
