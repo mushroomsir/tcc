@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
-	"github.com/mushroomsir/logger/alog"
 	"github.com/mushroomsir/tcc/lock/dto"
 )
 
@@ -23,8 +22,8 @@ func (a *Lock) Lock(name string, expire time.Duration) error {
 	err := a.DB.Exec(insertSql, name, now).Error
 	if err != nil {
 		findSql := "select * from tcc_lock where `name` = ? limit 1"
-		e := a.DB.Raw(findSql, name).Scan(lock).Error
-		if e == nil {
+		err = a.DB.Raw(findSql, name).Scan(lock).Error
+		if err == nil {
 			if lock.ExpireAt.Before(now) {
 				a.Unlock(name) // release lock
 				err = a.DB.Exec(insertSql, name, now).Error
@@ -38,10 +37,11 @@ func (a *Lock) Lock(name string, expire time.Duration) error {
 }
 
 // Unlock ...
-func (a *Lock) Unlock(name string) {
+func (a *Lock) Unlock(name string) error {
 	sql := "delete from tcc_lock where `name` = ?"
 	err := a.DB.Exec(sql, name).Error
 	if err != nil {
-		alog.Errf("unlock: key %s, error %v", name, err.Error())
+		return fmt.Errorf("unlock: key %s, error %s", name, err.Error())
 	}
+	return nil
 }

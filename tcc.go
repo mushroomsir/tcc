@@ -1,11 +1,11 @@
 package tcc
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mushroomsir/logger/alog"
 	"github.com/mushroomsir/tcc/lock"
 	"github.com/mushroomsir/tcc/store"
 	"github.com/mushroomsir/tcc/store/dto"
@@ -26,8 +26,9 @@ type Option struct {
 	LockExpire        time.Duration
 	TryFailed         time.Duration
 
-	Store store.TccAsyncTaskInterface
-	Lock  lock.LockInterface
+	Store  store.TccAsyncTaskInterface
+	Lock   lock.LockInterface
+	Logger LoggerInterface
 }
 
 // TCC ...
@@ -56,6 +57,9 @@ func (a *TCC) init() {
 	}
 	if a.Lock == nil {
 		panic("lock is nil")
+	}
+	if a.Logger == nil {
+		a.Logger = &Logger{}
 	}
 	if a.PullTaskInterval < 1 {
 		a.PullTaskInterval = 3
@@ -119,7 +123,7 @@ func (a *TCC) Loop() {
 		time.Sleep(s)
 		tasks, err := a.Store.Tasks(a.PullTaskBatchSize)
 		if err != nil {
-			alog.Err("pull task", err.Error())
+			a.Logger.Err(fmt.Errorf("pull task error, %s", err.Error()))
 			continue
 		}
 		if len(tasks) == 0 {
@@ -156,10 +160,10 @@ func (a *TCC) Loop() {
 func (a *TCC) handler(task *dto.TccAsyncTaskSchema) {
 	defer func() {
 		if err := recover(); err != nil {
-			alog.Err("tcchandler", err)
+			a.Logger.Err(fmt.Errorf("handler task error, %v", err))
 		}
 	}()
-	t := &Task{
+	out := &Task{
 		uid:       task.UID,
 		store:     a.Store,
 		Name:      task.Name,
@@ -167,24 +171,47 @@ func (a *TCC) handler(task *dto.TccAsyncTaskSchema) {
 		CreatedAt: task.CreatedAt,
 	}
 	if task.Status == tccTry && a.getTryHandler() != nil {
-		err := a.Lock.Lock(task.UID, a.LockExpire)
-		if err == nil {
-			res, err := a.Store.Task(task.UID)
-			if err == nil && res.Status == tccTry {
-				a.getTryHandler()(t)
-			}
-			a.Lock.Unlock(task.UID)
-		}
+		a.handlerTry(task, out)
 	} else if task.Status == tccConfirm && a.getConfirmHandler() != nil {
-		err := a.Lock.Lock(task.UID, a.LockExpire)
-		if err == nil {
-			_, err = a.Store.Task(task.UID)
-			if err == nil {
-				a.getConfirmHandler()(t)
-			}
-			a.Lock.Unlock(task.UID)
-		}
+		a.handlerConfirm(task, out)
 	} else {
-		t.Cancel()
+		err := out.Cancel()
+		if err != nil {
+			a.Logger.Err(fmt.Errorf("cancel error, %s", err.Error()))
+		}
+	}
+}
+
+func (a *TCC) handlerTry(task *dto.TccAsyncTaskSchema, out *Task) {
+	err := a.Lock.Lock(task.UID, a.LockExpire)
+	if err != nil {
+		return
+	}
+	res, err := a.Store.Task(task.UID)
+	if err != nil {
+		a.Logger.Err(fmt.Errorf("get task error, %s", err.Error()))
+	} else if res.Status == tccTry {
+		a.getTryHandler()(out)
+	}
+	err = a.Lock.Unlock(task.UID)
+	if err != nil {
+		a.Logger.Err(fmt.Errorf("unlock error, %s", err.Error()))
+	}
+}
+
+func (a *TCC) handlerConfirm(task *dto.TccAsyncTaskSchema, out *Task) {
+	err := a.Lock.Lock(task.UID, a.LockExpire)
+	if err != nil {
+		return
+	}
+	res, err := a.Store.Task(task.UID)
+	if err != nil {
+		a.Logger.Err(fmt.Errorf("get task error, %s", err.Error()))
+	} else if res.Status == tccConfirm {
+		a.getConfirmHandler()(out)
+	}
+	err = a.Lock.Unlock(task.UID)
+	if err != nil {
+		a.Logger.Err(fmt.Errorf("unlock error, %s", err.Error()))
 	}
 }

@@ -2,6 +2,7 @@ package tcc
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/mushroomsir/tcc/store"
@@ -13,18 +14,27 @@ type Task struct {
 	Value     string
 	CreatedAt time.Time
 
-	uid   string
-	store store.TccAsyncTaskInterface
+	uid    string
+	store  store.TccAsyncTaskInterface
+	logger LoggerInterface
 }
 
 // Confirm submit async task
 func (a *Task) Confirm() error {
-	return a.store.Confirm(a.uid)
+	err := a.store.Confirm(a.uid)
+	if err != nil {
+		a.logger.Err(fmt.Errorf("Confirm error, %s", err.Error()))
+	}
+	return err
 }
 
 // Cancel ...
 func (a *Task) Cancel() error {
-	return a.store.Cancel(a.uid)
+	err := a.store.Cancel(a.uid)
+	if err != nil {
+		a.logger.Err(fmt.Errorf("cancel error, %s", err.Error()))
+	}
+	return err
 }
 
 // JSONToObj ...
