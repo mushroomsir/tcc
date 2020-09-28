@@ -1,0 +1,21 @@
+language: go
+
+matrix:
+  include:
+    - go: 1.14.x
+    - master
+
+before_install:
+  - go get -t -v ./...
+  - go get github.com/modocache/gover
+  - go get github.com/mattn/goveralls
+
+script:
+  - go test -p 1 ./...
+  - go test -coverprofile=mimetypes.coverprofile
+  - gover
+  - goveralls -coverprofile=mimetypes.coverprofile -service=travis-ci
+
+notifications:
+  email:
+    on_success: never
