@@ -6,7 +6,7 @@
 TCC 基于本地消息表的分布式事务处理
 
 ## Design
-1. [介绍分布式系统中的事务问题](https://github.com/mushroomsir/blog/blob/master/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E4%B8%AD%E7%9A%84%E4%BA%8B%E5%8A%A1%E9%97%AE%E9%A2%98.md)
+1. [介绍分布式系统中的事务问题](https://mushroomsir.github.io/distribution_transaction/)
 2. TCC 异步补偿的设计与实现（TODO）
 
 ## Usage
